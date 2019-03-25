@@ -20,10 +20,14 @@ library(broom)
 # Backend Startup Definitions
 
 # Helper functions
+
+
+#' Generate a list of links referencing the monthly crude oil production PDFs produced by the Texas RRC.
+#' 
+#' @return A vector of link strings
 getRRClinks <- function (){
-  #' Generate a list of links referencing the monthly crude oil production PDFs produced by the Texas RRC.
-  #' 
-  #' @return A vector of link strings
+
+
   url <- 'https://www.rrc.texas.gov/oil-gas/research-and-statistics/production-data/monthly-crude-oil-production-by-district-and-field/'
   page <- read_html(url)
   links <- page %>% html_nodes("a") %>% html_attr("href")
@@ -32,11 +36,12 @@ getRRClinks <- function (){
   return(links)
 }
 
+#' Convert PDF text output to a list containing the date and table values
+#' 
+#' @param link an address of an RRC production record PDF
+#' @return A list containing the date and a vector of lines for the table
 readRRCpdf <- function (link) {
-  #' Convert PDF text output to a list containing the date and table values
-  #' 
-  #' @param link an address of an RRC production record PDF
-  #' @return A list containing the date and a vector of lines for the table
+
   
   # Extract 2nd page of pdf - finalized production
   reportText <- pdf_text(link)[2]
@@ -57,12 +62,13 @@ readRRCpdf <- function (link) {
   return(list("date" = date,"data" = tableData))
 }
 
+#' Creates a dataframe from the output of readRRCpdf
+#'
+#' @param inputList$date The date of the extracted table
+#' @param inputList$data A vector of line strings for the table
+#' @return A dataframe of production data
 createRRCdataFrame <- function(inputList) {
-  #' Creates a dataframe from the output of readRRCpdf
-  #'
-  #' @param inputList$date The date of the extracted table
-  #' @param inputList$data A vector of line strings for the table
-  #' @return A dataframe of production data
+
   
   date <- inputList$date
   tableData <- inputList$data
@@ -220,7 +226,7 @@ createRRCdistrictMap <- function(districtTable) {
 texasRRCmap <- createRRCdistrictMap(rrcDistricts)
 
 
-# Define UI for application that draws a histogram
+# Define UI
 ui <- fluidPage(
    
    # Application title
@@ -256,8 +262,9 @@ ui <- fluidPage(
   )
 )
 
+# Backend
 server <- function(input, output) {
-   
+   # Choropleth Plot
   output$choropleth <- renderPlotly({
     bpColors <- c("#009B00","#98CE00","#ffff00","#FFFFFF")
     selectedDate <- input$selectedDate%>%as.yearmon%>%as.Date
@@ -276,20 +283,21 @@ server <- function(input, output) {
       theme(legend.position = "none") +
       scale_fill_gradient2(low = bpColors[4],mid = bpColors[3],high = bpColors[1])
     # p
-    ggplotly(p, tooltip = "text")
+    ggplotly(p, tooltip = "text") %>% config(displaylogo = FALSE, displayModeBar = FALSE)
   })
-   
+   # Line Plot
   output$linePlot <- renderPlotly({
     selectedDate <- input$selectedDate%>%as.yearmon%>%as.Date
     
     l <- fullData %>% ggplot(aes(x = date, y = bblReportedMonth, col = rrcDist,
                                  text = sprintf("District: %s<br>%s<br>District Monthly Production:%s<br>",rrcDist,format(date,"%B %Y"),comma(bblReportedMonth)),
-                                 group = rrcDist
-    )) + 
-      geom_line() + geom_point(data = fullData %>% filter(date==selectedDate),aes(x = date, y = bblReportedMonth),col='red') + 
+                                 group = rrcDist)) + 
+      geom_line() + 
+      # Red Dots
+      geom_point(data = fullData %>% filter(date==selectedDate),aes(x = date, y = bblReportedMonth),col='red') + 
       scale_y_continuous(label = unit_format(scale = 1e-6,unit = NULL)) + 
       labs(col = "District") + xlab("Date") + ylab("Monthly Reported Production (MMbbl)")
-    ggplotly(l, tooltip = "text")
+    ggplotly(l, tooltip = "text") %>% config(displaylogo = FALSE, displayModeBar = FALSE)
    })
   
   output$productionTable <- DT::renderDataTable({selectedDate <- input$selectedDate%>%as.yearmon%>%as.Date
