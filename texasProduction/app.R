@@ -266,7 +266,6 @@ ui <- fluidPage(
 server <- function(input, output) {
    # Choropleth Plot
   output$choropleth <- renderPlotly({
-    bpColors <- c("#009B00","#98CE00","#ffff00","#FFFFFF")
     selectedDate <- input$selectedDate%>%as.yearmon%>%as.Date
     dataForDate <- fullData %>% filter(date == selectedDate)
     
@@ -281,7 +280,7 @@ server <- function(input, output) {
       # coord_fixed(1.3) + # Broken for plotly
       theme_void() + 
       theme(legend.position = "none") +
-      scale_fill_gradient2(low = bpColors[4],mid = bpColors[3],high = bpColors[1])
+      scale_fill_gradient(low='#e5f5e0',high='#31a354')
     # p
     ggplotly(p, tooltip = "text") %>% config(displaylogo = FALSE, displayModeBar = FALSE)
   })
