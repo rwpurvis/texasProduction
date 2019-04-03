@@ -168,15 +168,16 @@ rrcDistricts <- read_csv("counties.csv") # RRC district table from:
 # Some typos fixed manually
 rrcDistricts <- rrcDistricts %>% mutate(County = tolower(County),DC = tolower(DC))
 
-createRRCdistrictMap <- function(districtTable) {
-  #' Creates a ggplot-friendly dataframe containing polygon coordinates for the Texas
-  #' RRC districts. Utilizes county map from the maps package, and combines according to 
-  #' the rrcDistricts list.
-  #' Based on this StackOverflow post with tweaks:
-  #' https://stackoverflow.com/questions/43174769/r-aggregate-county-map-polygons-to-create-custom-borders
-  #' 
-  #' @param districtTable A Dataframe containing the list of Texas counties and their dist.
-  #' @return A dataframe with polygon coordinates corresponding with Texas RRC districts
+#' Creates a ggplot-friendly dataframe containing polygon coordinates for the Texas
+#' RRC districts. Utilizes county map from the maps package, and combines according to 
+#' the rrcDistricts list.
+#' Based on this StackOverflow post with tweaks:
+#' https://stackoverflow.com/questions/43174769/r-aggregate-county-map-polygons-to-create-custom-borders
+#' @param districtTable A Dataframe containing the list of Texas counties and their dist.
+#' @param centroids Whether to return the centroids (for labeling) or polygon coordinates
+#'
+#' @return A dataframe with polygon coordinates corresponding with Texas RRC districts
+createRRCdistrictMap <- function(districtTable, centroids = FALSE) {
 
   county <- maps::map("county",fill = TRUE)
   
@@ -215,15 +216,24 @@ createRRCdistrictMap <- function(districtTable) {
   # Because of topology problems
   county.sp.data.buffer <- gBuffer(texas.county.sp.data.dist, byid = TRUE, width = 0)
   # Merge polygons according to region
-  county.region <-gUnaryUnion(county.sp.data.buffer, 
+  county.region <- gUnaryUnion(county.sp.data.buffer, 
                               id = county.sp.data.buffer@data$region)
   
-  county.tidy <- suppressWarnings(tidy(county.region))
+  county.centroids <- as.data.frame(coordinates(county.region))
+  colnames(county.centroids) <- c("long","lat")
+  county.centroids$id <- rownames(county.centroids)
+  
+  if (centroids) {
+    county.tidy <- county.centroids
+  } else {
+    county.tidy <- suppressWarnings(tidy(county.region))
+  }
   
   return(county.tidy)
 }
 
 texasRRCmap <- createRRCdistrictMap(rrcDistricts)
+texasRRCcentroids <- createRRCdistrictMap(rrcDistricts,centroids = TRUE)
 
 
 # Define UI
@@ -277,6 +287,8 @@ server <- function(input, output) {
                                      text = sprintf("District: %s<br>District Monthly Production:%s<br>%s",
                                                     rrcDist,comma(bblReportedMonth),format(date,"%b %Y"))),
                                  col='black') + 
+      geom_text(data = texasRRCcentroids,
+                aes(label = id, x = long, y = lat)) + #add labels at centroids
       # coord_fixed(1.3) + # Broken for plotly
       theme_void() + 
       theme(legend.position = "none") +
