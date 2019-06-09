@@ -284,7 +284,7 @@ server <- function(input, output) {
     p <- ggplot() + geom_polygon(data = chorData, 
                                  aes(x=long,y=lat,
                                      group = group,fill=bblReportedMonth,
-                                     text = sprintf("District: %s<br>District Monthly Production:%s<br>%s",
+                                     text = sprintf("District: %s<br>District Monthly Production: %s bbl<br>%s",
                                                     rrcDist,comma(bblReportedMonth),format(date,"%b %Y"))),
                                  col='black') + 
       geom_text(data = texasRRCcentroids,
@@ -301,7 +301,8 @@ server <- function(input, output) {
     selectedDate <- input$selectedDate%>%as.yearmon%>%as.Date
     
     l <- fullData %>% ggplot(aes(x = date, y = bblReportedMonth, col = rrcDist,
-                                 text = sprintf("District: %s<br>%s<br>District Monthly Production:%s<br>",rrcDist,format(date,"%B %Y"),comma(bblReportedMonth)),
+                                 text = sprintf("District: %s<br>%s<br>District Monthly Production: %s bbl<br>",
+                                                rrcDist,format(date,"%B %Y"),comma(bblReportedMonth)),
                                  group = rrcDist)) + 
       geom_line() + 
       # Red Dots
@@ -314,7 +315,12 @@ server <- function(input, output) {
   output$productionTable <- DT::renderDataTable({selectedDate <- input$selectedDate%>%as.yearmon%>%as.Date
                                         dataForDate <- fullData %>% filter(date == selectedDate)
                                         dataForDate},
-                                        options = list(paging = FALSE,searching = FALSE,scrollX='400px'),
+                                        extensions = 'Buttons',
+                                        options = list(paging = FALSE,
+                                                       searching = FALSE,
+                                                       scrollX='400px',
+                                                       dom = 'Bfrtip',
+                                                       buttons = c('copy', 'csv', 'excel', 'pdf', 'print')),
                                         colnames = c("RRC District",
                                                      "Num. Reported Leases",
                                                      "Num. Delq. Leases",
