@@ -155,13 +155,30 @@ createRRCdataFrame <- function(inputList) {
 }
 
 # Generate data
-# links <- getRRClinks()
-# fullData <- do.call(rbind,lapply(lapply(links,readRRCpdf),createRRCdataFrame))
-# write_csv(fullData,"texasProduction/fullData.csv")
 
-# Read so I don't have to scrape every time
+# Load the last scraped date
+load("lastScraped.RData")
+
+# Load most recent data (to retain older data)
 fullData <- read_csv("fullData.csv")
 fullData$rrcDist <- factor(fullData$rrcDist,ordered = TRUE,levels = c('1','2','3','4','5','6','7b','7c','8','8a','9','10'))
+
+
+# Update Monthly
+if ((Sys.Date() -  lastScraped) > 30) {
+  
+  links <- getRRClinks()
+  # New RRC Data
+  draftData <- do.call(rbind,lapply(lapply(links,readRRCpdf),createRRCdataFrame))
+  # Any data not included
+  oldData <- fullData %>% filter(!(date %in% draftData$date))
+  fullData <- rbind(oldData,draftData)
+  write_csv(fullData,"fullData.csv")
+  # Update last scraped data
+  lastScraped <- Sys.Date()
+  save(lastScraped, file = "lastScraped.RData")
+}
+
 # Map data
 rrcDistricts <- read_csv("counties.csv") # RRC district table from:
 # https://www.rrc.state.tx.us/about-us/organization-activities/rrc-locations/counties-by-dist/
